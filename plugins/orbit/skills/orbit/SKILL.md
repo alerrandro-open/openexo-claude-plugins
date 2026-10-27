@@ -9,6 +9,9 @@ Skill do time OpenExO. Quem usa tem o próprio perfil (nome no Orbit, padrões e
 listas dos projetos) em `~/.claude/orbit-perfil.md`, fora da pasta da skill,
 para não se perder quando a skill for atualizada.
 
+Para registrar o dia inteiro de uma vez (chats, commits, agenda, e-mails...),
+use a skill `dia` deste plugin, que monta o plano e usa esta skill para gravar.
+
 ## Pré-requisitos
 
 - Extensão **Claude in Chrome** conectada, com o usuário já logado no Orbit.
@@ -31,6 +34,7 @@ Leia `~/.claude/orbit-perfil.md`. Se não existir:
   - Prioridade padrão: Alta
   - Horas estimadas padrão: 1h
   - Confirmar antes de criar: sim
+  - Pastas de projetos: ~/Documents/Projetos
 
   ## Listas
 

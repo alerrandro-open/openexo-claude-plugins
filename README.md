@@ -1,10 +1,11 @@
 # Plugins OpenExO para o Claude Code
 
-Marketplace do time OpenExO. Hoje tem um plugin:
+Marketplace do time OpenExO. Hoje tem um plugin, `orbit`, com duas skills:
 
-| Plugin | O que faz |
+| Skill | O que faz |
 |---|---|
-| `orbit` | Registra entregas no Orbit (orbit.openexo.com.br): cria ou atualiza a task na lista do projeto, com etiqueta, sprint, horas e commits, pelo Claude in Chrome. |
+| `orbit:orbit` | Registra uma entrega no Orbit (orbit.openexo.com.br): cria ou atualiza a task na lista do projeto, com etiqueta, sprint, horas e commits, pelo Claude in Chrome. |
+| `orbit:dia` | Varre o que você fez desde a última varredura (chats do Claude, commits, PRs, agenda, e-mails enviados, Drive, n8n, Lovable, Supabase), monta o plano de tasks e registra tudo depois do seu ok. |
 
 ## Instalar
 
@@ -28,6 +29,17 @@ Para usar, é preciso ter a extensão **Claude in Chrome** conectada e estar log
 Cada pessoa tem o próprio perfil em `~/.claude/orbit-perfil.md`: nome como aparece no Orbit, prioridade e horas padrão, se quer confirmar antes de criar e a tabela de listas dos projetos (repo → lista do Orbit → etiquetas). Esse arquivo não é apagado nas atualizações.
 
 As listas não ficam neste repositório, que é público: o time recebe a tabela junto com o prompt de instalação. Sem perfil, a skill pergunta o nome no primeiro uso e cria o arquivo; projeto sem lista no perfil, ela pergunta o link e a etiqueta e grava.
+
+## Varredura do dia
+
+A skill `orbit:dia` foi feita para rodar como tarefa agendada do app Claude (por exemplo, 12h e 18h em dias úteis) com um prompt que comece por `[varredura-orbit]`, a marca que tira a própria varredura da contagem. Ela:
+
+- lê os históricos locais do Claude e o git das "Pastas de projetos" do perfil (script `plugins/orbit/skills/dia/scripts/coletar_dia.py`, só leitura);
+- consulta GitHub, Agenda, Gmail (só assunto, destinatário e horário), Drive, n8n, Lovable e Supabase quando os conectores estiverem ligados;
+- calcula as horas pelo tempo real de interação, sem contar duas vezes os chats em paralelo;
+- mostra o plano e **só registra depois do ok**; o que já foi registrado fica em `~/.claude/orbit-varredura.json` e não se repete.
+
+Para rodar, o app e o Chrome (com o Claude in Chrome) precisam estar abertos. Se o app estiver fechado no horário, a tarefa roda quando ele abrir.
 
 ## Atualizar
 

@@ -10,7 +10,7 @@
     {
       "name": "orbit",
       "source": "./plugins/orbit",
-      "description": "Registra entregas no Orbit (orbit.openexo.com.br), o gestor de tarefas da OpenExO."
+      "description": "Registra entregas no Orbit (orbit.openexo.com.br), o gestor de tarefas da OpenExO, uma a uma ou numa varredura do dia."
     }
   ]
 }
