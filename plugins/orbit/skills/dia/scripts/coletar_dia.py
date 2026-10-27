@@ -108,6 +108,7 @@ def ler_sessao(caminho, desde, ate):
     marcas = []
     mensagens = 0
     eh_varredura = False
+    primeira_mensagem = True
     with open(caminho, encoding="utf-8", errors="replace") as f:
         for bruta in f:
             try:
@@ -125,8 +126,12 @@ def ler_sessao(caminho, desde, ate):
                 continue
             ts = ler_ts(linha.get("timestamp", ""))
             humano = eh_pedido_humano(linha)
-            if tipo == "user" and MARCA in texto_da_mensagem(linha.get("message"))[:2000]:
-                eh_varredura = True
+            texto_user = texto_da_mensagem(linha.get("message")).strip() if tipo == "user" else ""
+            if texto_user and primeira_mensagem:
+                # Só a tarefa agendada abre o chat com a marca; a skill carregada
+                # no meio de outro chat também cita a marca e não pode excluí-lo.
+                eh_varredura = texto_user.startswith(MARCA)
+                primeira_mensagem = False
             if not ts or ts < desde or ts > ate:
                 continue
             if tipo == "assistant":

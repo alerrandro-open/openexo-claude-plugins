@@ -1,6 +1,6 @@
 {
   "name": "orbit",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Registra entregas no Orbit (orbit.openexo.com.br), o gestor de tarefas da OpenExO, uma a uma ou numa varredura do dia.",
   "author": {
     "name": "OpenExO"
