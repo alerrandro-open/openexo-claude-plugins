@@ -1,0 +1,16 @@
+{
+  "name": "openexo",
+  "owner": {
+    "name": "OpenExO"
+  },
+  "metadata": {
+    "description": "Plugins e skills do time OpenExO para o Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "orbit",
+      "source": "./plugins/orbit",
+      "description": "Registra entregas no Orbit (orbit.openexo.com.br), o gestor de tarefas da OpenExO."
+    }
+  ]
+}
