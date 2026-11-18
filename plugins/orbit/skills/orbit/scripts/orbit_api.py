@@ -276,7 +276,7 @@ def resolver_status(valor, lid=None):
     return padrao
 
 
-ORDEM_GRUPOS = ["vencida", "hoje", "amanha", "semana", "depois", "sem_prazo", "backlog"]
+ORDEM_GRUPOS = ["vencida", "hoje", "amanha", "semana", "depois", "sem_prazo", "aguardando", "backlog"]
 
 
 def _data(texto):
@@ -306,8 +306,12 @@ def cmd_pendencias(args):
             vence = _data(t.get("due_date"))
             atualizada = _data(t.get("updated_at"))
             dias = (vence - hoje).days if vence else None
-            if "backlog" in (status.get("name") or "").lower():
+            nome_status = (status.get("name") or "").lower()
+            if "backlog" in nome_status:
                 grupo = "backlog"
+            elif any(p in nome_status for p in ("waiting", "impedid", "aguard")):
+                # Depende de outra pessoa: não é atraso de quem está usando.
+                grupo = "aguardando"
             elif dias is None:
                 grupo = "sem_prazo"
             elif dias < 0:
@@ -332,7 +336,7 @@ def cmd_pendencias(args):
                               i["dias_para_vencer"] if i["dias_para_vencer"] is not None else 9999,
                               -(i["dias_sem_mexer"] or 0)))
     resumo = {g: sum(1 for i in itens if i["grupo"] == g) for g in ORDEM_GRUPOS}
-    resumo["paradas"] = sum(1 for i in itens if i["parada"] and i["grupo"] != "backlog")
+    resumo["paradas"] = sum(1 for i in itens if i["parada"] and i["grupo"] not in ("backlog", "aguardando"))
     mostrar({"hoje": hoje.isoformat(), "total": len(itens), "resumo": resumo, "tarefas": itens})
 
 
