@@ -12,7 +12,7 @@ token. A saída é sempre JSON.
   orbit_api.py tarefas --lista LISTA [--busca TXT] [--minhas] [--encerradas] [--desde AAAA-MM-DD]
   orbit_api.py entregar ARQUIVO.json [--simular]
   orbit_api.py horas TAREFA --data AAAA-MM-DD --inicio HH:MM --duracao "1h 30m" [--nota TXT] [--chave K] [--simular]
-  orbit_api.py atualizar TAREFA [--status S] [--descricao TXT [--substituir]] [--etiquetas "A,B"] [--simular]
+  orbit_api.py atualizar TAREFA [--status S [--lista LISTA]] [--descricao TXT [--substituir]] [--etiquetas "A,B"] [--simular]
 
 LISTA e TAREFA aceitam o id ou o link do Orbit (/l/<id>/list, /t/<id>).
 """
@@ -186,6 +186,40 @@ def cmd_tarefas(args):
     } for t in saida])
 
 
+# Atalhos de status. A API resolve "doing" pelo primeiro status do tipo
+# (na lista OpenExO, "Waiting - Impedido"), então o script troca o atalho
+# pelo nome do status certo da lista antes de mandar.
+ATALHOS = {
+    "doing": ("doing", ("doing", "em andamento"), "Doing - Em Andamento"),
+    "closed": ("closed", ("closed", "encerrad"), "Closed - Encerrada"),
+    "open": ("open", ("to do", "a fazer"), "To Do - A Fazer"),
+}
+_status_cache = {}
+
+
+def status_da_lista(lid):
+    if lid not in _status_cache:
+        try:
+            _status_cache[lid] = chamar("GET", "/lists/%s/meta" % lid).get("statuses", [])
+        except ErroApi:
+            _status_cache[lid] = []
+    return _status_cache[lid]
+
+
+def resolver_status(valor, lid=None):
+    """Troca doing/closed/open pelo nome do status certo da lista."""
+    if not isinstance(valor, str) or valor.strip().lower() not in ATALHOS:
+        return valor
+    tipo, termos, padrao = ATALHOS[valor.strip().lower()]
+    if lid:
+        candidatos = [s for s in status_da_lista(lid) if s.get("type") == tipo]
+        for termo in termos:
+            for s in candidatos:
+                if termo in s.get("name", "").lower():
+                    return s["name"]
+    return padrao
+
+
 def nomes_de_status(list_ids):
     nomes = {}
     for lid in set(filter(None, list_ids)):
@@ -206,6 +240,8 @@ def cmd_entregar(args):
     for i in itens:
         if i.get("list_id"):
             i["list_id"] = id_de(i["list_id"])
+        if i.get("final_status"):
+            i["final_status"] = resolver_status(i["final_status"], i.get("list_id"))
     resultados = []
     for n in range(0, len(itens), LOTE):
         lote = itens[n:n + LOTE]
@@ -248,7 +284,7 @@ def cmd_horas(args):
 def cmd_atualizar(args):
     corpo = {"dry_run": bool(args.simular)}
     if args.status:
-        corpo["status"] = args.status
+        corpo["status"] = resolver_status(args.status, id_de(args.lista) if args.lista else None)
     if args.descricao:
         corpo["description"] = args.descricao
         corpo["description_mode"] = "replace" if args.substituir else "append"
@@ -303,7 +339,8 @@ def main():
 
     s = sub.add_parser("atualizar")
     s.add_argument("tarefa")
-    s.add_argument("--status")
+    s.add_argument("--status", help="closed, doing, open ou o nome do status")
+    s.add_argument("--lista", help="lista da tarefa, para achar o nome certo do status")
     s.add_argument("--descricao")
     s.add_argument("--substituir", action="store_true", help="troca a descrição em vez de acrescentar")
     s.add_argument("--etiquetas", help="lista completa, separada por vírgula")
