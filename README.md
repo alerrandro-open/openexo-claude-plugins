@@ -5,7 +5,7 @@ Marketplace do time OpenExO. Hoje tem um plugin, `orbit`, com duas skills:
 | Skill | O que faz |
 |---|---|
 | `orbit:orbit` | Registra uma entrega no Orbit (orbit.openexo.com.br): cria ou atualiza a task na lista do projeto, com etiqueta, sprint, horas e commits, pela API do Orbit (o Claude in Chrome fica de reserva). |
-| `orbit:dia` | Varre o que você fez desde a última varredura (chats do Claude, commits, PRs, agenda, e-mails enviados, Drive, n8n, Lovable, Supabase), monta o plano de tasks e registra tudo depois do seu ok. |
+| `orbit:dia` | Varre o que você fez desde a última varredura (chats do Claude, commits, PRs, agenda, e-mails enviados, Drive, n8n, Lovable, Supabase e, se ligado, o registro de atividade), monta o plano de tasks, mostra suas pendências por prazo e registra tudo depois do seu ok. |
 
 ## Instalar
 
@@ -72,6 +72,12 @@ Nem toda sessão é trabalho para registrar. Para deixar algo de fora:
 - **Um item do plano:** responda "tira o 3". Ele fica marcado como ignorado e não volta.
 
 No fim do plano, a varredura mostra numa linha o que ficou de fora e por quê, para você conferir.
+
+## Pendências e prazos
+
+Toda varredura mostra, depois do plano, as suas tasks abertas no Orbit, em todas as listas, separadas em vencidas, de hoje, de amanhã e da semana. Para cada uma ela sugere encerrar (se o trabalho já terminou), passar para Waiting (se depende de outra pessoa) ou uma data nova. As tasks paradas há mais de 7 dias também aparecem.
+
+A qualquer hora, peça numa sessão "o que tenho pendente no Orbit?" ou "organiza meus prazos": a skill monta uma ordem para a semana. Nada muda sem o seu ok. A API do Orbit não altera o vencimento, então as datas novas vêm numa lista para você ajustar na tela (ou o Claude ajusta pelo navegador, se você pedir).
 
 ## Registro de atividade (opcional)
 

@@ -65,6 +65,17 @@ Não copie títulos de janela para o Orbit: eles podem ter nome de cliente,
 paciente ou conversa. Escreva a entrega com as suas palavras. Se `atividade`
 vier `null`, o registro não está ligado; siga sem ele.
 
+### Pendências no Orbit
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/../orbit/scripts/orbit_api.py" pendencias
+```
+
+O comando devolve as tasks abertas da pessoa em todas as listas, cada uma num
+grupo: `vencida`, `hoje`, `amanha`, `semana`, `depois`, `sem_prazo` ou
+`backlog`. Também traz `dias_sem_mexer` e `parada` (sem mexer há 7 dias ou
+mais). Sem token, pule e diga no plano.
+
 ### Outras fontes (conectores)
 
 Use as que estiverem disponíveis; sem o conector, pule e diga no plano.
@@ -104,6 +115,9 @@ Tudo o que aconteceu na janela entra em alguma task:
   correspondente: `Comunicação | E-mails do dia` ou `Documento | <nome>`.
 - **Chats curtos** (perguntas, conferências rápidas) que não formam entrega:
   uma task por lista, `Atendimento | Análises e dúvidas do dia (DD/MM)`.
+- **Pendência que já existe:** se a entrega é continuação de uma task aberta
+  (mesmo assunto em `pendencias`), atualize essa task em vez de criar outra.
+  Se o trabalho do dia a terminou, planeje encerrar.
 - **Já registrado** (`ja_registrado` ou chave no estado): não crie outra;
   planeje atualizar a task existente (acrescentar commits e o que mudou e
   lançar as horas novas). O estado traz o `id` e a `external_key` da task
@@ -160,9 +174,19 @@ Depois da tabela, mostre:
   plano;
 - o que ficou fora do Orbit, numa linha: títulos de `ignoradas` com o motivo
   (marca ou perfil), para a pessoa conferir;
+- **Suas pendências**, curto, a partir de `pendencias`:
+  - **Vencidas** (até 10, as mais atrasadas primeiro; diga quantas sobram),
+    **hoje**, **amanhã** e **esta semana**. Cada uma com lista, vencimento e
+    uma sugestão:
+    - "encerrar", quando o plano ou o relatório mostra que terminou;
+    - "Waiting", quando depende de outra pessoa (cliente, Meta, fornecedor);
+    - "nova data", quando ainda é da pessoa e o prazo passou.
+  - **Paradas** (7 dias ou mais sem mexer): pergunte numa linha se ainda valem.
+  - Backlog e sem prazo: só a contagem;
 - fontes puladas (sem conector) e listas que faltam no perfil;
 - o pedido: "Responda **ok** para registrar, ou diga o que mudar (juntar,
-  separar, tirar, horas, lista)."
+  separar, tirar, horas, lista). Para as pendências, diga quais encerrar,
+  quais passar para Waiting e as datas novas."
 
 Rodando agendada, ninguém está olhando: deixe o plano e espere a resposta
 no próprio chat. Não registre nada sem o ok, nem por tempo esgotado.
@@ -190,6 +214,17 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/coletar_dia.py" marcar --task "Título da t
 ```
 
 Itens ignorados: `marcar --task "(ignorado)" <chaves>`.
+
+Pendências, só o que a pessoa aprovou:
+- **Encerrar:** `orbit_api.py atualizar TAREFA --status closed --lista LISTA`.
+  Encerrar exige horas: sem horas na task, lance as do trabalho com `horas`
+  antes, ou pergunte.
+- **Waiting:** `orbit_api.py atualizar TAREFA --status "Waiting - Impedido"`
+  (use o nome que existir na lista, conforme `meta`), com uma linha na
+  descrição dizendo de quem depende.
+- **Nova data:** a API não muda vencimento. Liste as datas novas para a pessoa
+  ajustar na tela do Orbit, ou ajuste pelo navegador (skill `orbit`, seção 6)
+  se ela pedir.
 
 No fim, com tudo registrado, feche a janela com o `ate` da coleta:
 
