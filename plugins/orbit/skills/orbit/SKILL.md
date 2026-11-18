@@ -240,7 +240,8 @@ parecido:
 1. Rode `orbit_api.py pendencias` (todas as listas; `--lista` para uma só).
 2. Mostre por grupo: vencidas, hoje, amanhã, esta semana, depois, sem prazo.
    Para cada uma, mostre lista, status, vencimento, dias sem mexer e o
-   resumo da descrição (o que falta). Backlog vai só como contagem.
+   resumo da descrição (o que falta). Aguardando (Waiting) e Backlog vão só
+   como contagem: não são atraso da pessoa.
 3. Sugira, por task:
    - **encerrar**, se já terminou (pergunte se não tiver certeza);
    - **Waiting**, se depende de outra pessoa (cliente, Meta, fornecedor),

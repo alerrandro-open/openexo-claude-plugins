@@ -72,8 +72,8 @@ python3 "${CLAUDE_SKILL_DIR}/../orbit/scripts/orbit_api.py" pendencias
 ```
 
 O comando devolve as tasks abertas da pessoa em todas as listas, cada uma num
-grupo: `vencida`, `hoje`, `amanha`, `semana`, `depois`, `sem_prazo` ou
-`backlog`. Também traz `dias_sem_mexer` e `parada` (sem mexer há 7 dias ou
+grupo: `vencida`, `hoje`, `amanha`, `semana`, `depois`, `sem_prazo`,
+`aguardando` (status Waiting/Impedido: depende de outra pessoa) ou `backlog`. Também traz `dias_sem_mexer` e `parada` (sem mexer há 7 dias ou
 mais). Sem token, pule e diga no plano.
 
 ### Outras fontes (conectores)
@@ -182,6 +182,8 @@ Depois da tabela, mostre:
     - "Waiting", quando depende de outra pessoa (cliente, Meta, fornecedor);
     - "nova data", quando ainda é da pessoa e o prazo passou.
   - **Paradas** (7 dias ou mais sem mexer): pergunte numa linha se ainda valem.
+  - **Aguardando** (Waiting): só a contagem e, se a pessoa quiser, de quem
+    depende cada uma (está na descrição). Não entram como atraso dela;
   - Backlog e sem prazo: só a contagem;
 - fontes puladas (sem conector) e listas que faltam no perfil;
 - o pedido: "Responda **ok** para registrar, ou diga o que mudar (juntar,
