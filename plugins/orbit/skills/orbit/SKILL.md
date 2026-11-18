@@ -102,7 +102,7 @@ válidos da lista saem em `orbit_api.py meta <lista>` (`tags`).
 | Campo | Valor | Na API |
 |---|---|---|
 | Título | `Área \| O que foi entregue` (ex.: `Monitoramento \| Central de avisos com horário por tipo`) | `title` |
-| Status | final `Closed - Encerrada` (entregue) ou `Doing - Em Andamento` (em andamento) | `final_status`: `"closed"`, `"doing"` ou o nome |
+| Status | final `Closed - Encerrada` (entregue) ou `Doing - Em Andamento` (em andamento) | `final_status`: `"closed"`, `"doing"` ou o nome (o script troca o atalho pelo nome do status da lista: `doing` vira `Doing - Em Andamento`, e não o primeiro status do tipo, como `Waiting - Impedido`) |
 | Responsáveis | quem é dono do token | `assignees: ["me"]` (outra pessoa: id em `meta` → `members`) |
 | Prioridade | "Prioridade padrão" do perfil (sem perfil: `Alta`) | `priority`; só na criação, a API não muda depois |
 | Etiquetas | as da linha do projeto no perfil, exatamente com esse nome | `tags` |
@@ -137,7 +137,7 @@ Scripts: `python3 "${CLAUDE_SKILL_DIR}/scripts/orbit_api.py" <comando>`.
      que é novo na descrição e só as horas novas em `time_entries`;
    - sem `external_keys` (criada pela tela): `atualizar TAREFA --descricao "..."`
      (acrescenta), `horas TAREFA --data AAAA-MM-DD --inicio HH:MM --duracao "1h"`
-     e, se terminou, `atualizar TAREFA --status closed`. Título, estimativa,
+     e, se terminou, `atualizar TAREFA --status closed --lista LISTA`. Título, estimativa,
      datas e prioridade não mudam pela API.
 2. **Monte o arquivo de entregas** (JSON, no scratchpad), um item por task:
 
