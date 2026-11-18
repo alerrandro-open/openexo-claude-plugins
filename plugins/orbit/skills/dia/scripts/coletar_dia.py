@@ -6,7 +6,7 @@ Usado pela skill orbit:dia. Só lê os históricos locais do Claude
 varredura em ~/.claude/orbit-varredura.json (subcomandos marcar e concluir).
 
   coletar_dia.py coletar [--desde ISO] [--ate ISO]
-  coletar_dia.py marcar --task "Título" [--lista URL] CHAVE [CHAVE ...]
+  coletar_dia.py marcar --task "Título" [--lista URL] [--id ID] [--chave-externa K] CHAVE [CHAVE ...]
   coletar_dia.py concluir --ate ISO
 """
 import argparse
@@ -305,8 +305,13 @@ def marcar(args):
     estado = ler_estado()
     registradas = estado.setdefault("registradas", {})
     for chave in args.chaves:
-        registradas[chave] = {"task": args.task, "lista": args.lista,
-                              "em": agora().isoformat(timespec="minutes")}
+        registro = {"task": args.task, "lista": args.lista,
+                    "em": agora().isoformat(timespec="minutes")}
+        if args.id:
+            registro["id"] = args.id
+        if args.chave_externa:
+            registro["external_key"] = args.chave_externa
+        registradas[chave] = registro
     gravar_estado(estado)
     print("marcadas %d chaves para %r" % (len(args.chaves), args.task))
 
@@ -331,6 +336,8 @@ def main():
     m = sub.add_parser("marcar")
     m.add_argument("--task", required=True)
     m.add_argument("--lista")
+    m.add_argument("--id", help="id da task no Orbit (devolvido pela API)")
+    m.add_argument("--chave-externa", dest="chave_externa", help="external_key da entrega")
     m.add_argument("chaves", nargs="+")
     m.set_defaults(func=marcar)
     f = sub.add_parser("concluir")
