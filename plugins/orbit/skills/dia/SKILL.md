@@ -7,8 +7,11 @@ description: Varre tudo o que a pessoa fez desde a última varredura (chats do C
 
 Junta o trabalho da pessoa desde a última varredura e registra no Orbit. O
 registro em si segue a skill `orbit` deste plugin (perfil, listas, padrão de
-task e o passo a passo no navegador): leia `../orbit/SKILL.md` e
-`../orbit/references/interface.md` antes de registrar.
+task, chave da entrega e a API): leia `../orbit/SKILL.md` antes de montar o
+plano. O cliente da API é `../orbit/scripts/orbit_api.py`, chamado aqui de
+`orbit_api.py`. Confira o token logo no início (`orbit_api.py token`). Sem
+token, avise no plano e registre pelo navegador, seguindo a seção 6 da skill
+`orbit` e `../orbit/references/interface.md`.
 
 **Sempre mostre o plano e espere o ok**, mesmo que o perfil diga "Confirmar
 antes de criar: não". Até o ok, tudo é só leitura.
@@ -77,7 +80,10 @@ Tudo o que aconteceu na janela entra em alguma task:
   uma task por lista, `Atendimento | Análises e dúvidas do dia (DD/MM)`.
 - **Já registrado** (`ja_registrado` ou chave no estado): não crie outra;
   planeje atualizar a task existente (acrescentar commits e o que mudou e
-  lançar as horas novas).
+  lançar as horas novas). O estado traz o `id` e a `external_key` da task
+  quando ela foi gravada pela API. Com `external_key`, a atualização é a mesma
+  entrega com a mesma chave. Sem ela, use `atualizar` e `horas` (skill
+  `orbit`, seção 4, passo 1).
 - **Lista e etiquetas:** pela tabela "Listas" do perfil, a partir do repo.
   Repo ou assunto sem lista: junte numa pergunta só no plano (link da lista
   e etiqueta) e grave as respostas no perfil.
@@ -89,19 +95,38 @@ Tudo o que aconteceu na janela entra em alguma task:
   duração das reuniões) e arredonde para 0,5h, mínimo 0,5h. Trabalho visto só
   por commit, sem chat: 0,5h, marcado "estimativa".
 - **Datas:** o dia em que o trabalho aconteceu.
+- **Início das horas:** a hora real em que começou (o `inicio` do primeiro
+  chat da entrega ou o início da reunião). Início + duração não pode passar
+  de agora; se passar, antecipe o início.
+- **Chave:** cada entrega nova ganha uma `external_key` no padrão da skill
+  `orbit` (`orbit:<pessoa>:<AAAA-MM-DD>:<assunto>`).
 - **Descrição:** 2-5 linhas em português do que mudou, a partir do
   relatório final, e a lista de commits (`hash mensagem`) e PRs. Não copie a
   conversa, nem tokens, senhas, telefones, CPF ou dados de pacientes/clientes
   finais.
 
-## 3. Mostrar o plano e esperar o ok
+## 3. Simular, mostrar o plano e esperar o ok
+
+Monte o arquivo de entregas (formato da skill `orbit`, seção 4) com as
+entregas novas e as atualizações que têm `external_key`, e simule:
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/../orbit/scripts/orbit_api.py" entregar <arquivo> --simular
+```
+
+Nada é gravado. Corrija o que voltar com erro (etiqueta, status, horas no
+futuro...) antes de mostrar o plano; o que depender do usuário vai como
+pergunta. Atualizações de tasks sem `external_key` também podem ser
+simuladas: `atualizar ... --simular` e `horas ... --simular`.
 
 Mostre uma tabela, na ordem em que vai registrar:
 
-| # | Task | Lista · etiquetas | Status | Horas | Nova ou atualiza | Origem |
+| # | Task | Lista · etiquetas | Status | Horas | Simulação | Origem |
 |---|---|---|---|---|---|---|
 
-Na coluna Origem, cite os chats (título), commits e PRs de cada task.
+Na coluna Simulação, use o resultado: nova (`created`), atualiza
+(`updated`), sem mudança (`unchanged`) ou o erro que sobrou. Na coluna
+Origem, cite os chats (título), commits e PRs de cada task.
 Depois da tabela, mostre:
 
 - tempo real no Claude (`minutos_reais_no_claude`) e total de horas do plano;
@@ -117,12 +142,19 @@ tirar: marque como ignorados (passo 4) para não voltarem.
 
 ## 4. Registrar e guardar o estado
 
-Para cada task aprovada, siga o fluxo da skill `orbit` (evitar duplicar,
-criar em andamento, registrar as horas, encerrar, conferir). Logo depois de
-cada uma, marque as chaves que ela cobriu:
+Com o ok, grave o mesmo arquivo de uma vez (já com os ajustes pedidos):
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/coletar_dia.py" marcar --task "Título da task" --lista "URL da lista" sessao:... commit:... agenda:...
+python3 "${CLAUDE_SKILL_DIR}/../orbit/scripts/orbit_api.py" entregar <arquivo>
+```
+
+As atualizações sem `external_key` vão por `atualizar` e `horas`. Repetir a
+gravação é seguro: o que já foi gravado volta `unchanged`. Sem token, siga o
+navegador (skill `orbit`, seção 6). Logo depois, marque as chaves que cada
+task cobriu, com o `task_id` e a `external_key` que a gravação devolveu:
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/coletar_dia.py" marcar --task "Título da task" --lista "URL da lista" --id <task_id> --chave-externa <external_key> sessao:... commit:... agenda:...
 ```
 
 Itens ignorados: `marcar --task "(ignorado)" <chaves>`.
@@ -133,8 +165,9 @@ No fim, com tudo registrado, feche a janela com o `ate` da coleta:
 python3 "${CLAUDE_SKILL_DIR}/scripts/coletar_dia.py" concluir --ate "<ate da coleta>"
 ```
 
-Se parar no meio (Chrome caiu, erro no Orbit), não rode `concluir`: o que já
-foi marcado não se repete na próxima varredura e o resto volta para o plano.
+Se parar no meio (API fora do ar, Chrome caiu, erro no Orbit), não rode
+`concluir`: o que já foi marcado não se repete na próxima varredura e o resto
+volta para o plano.
 
 Responda com a lista `título -> status (horas)`, o que ficou pendente e as
 listas novas gravadas no perfil.

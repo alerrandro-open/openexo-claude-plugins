@@ -4,7 +4,7 @@ Marketplace do time OpenExO. Hoje tem um plugin, `orbit`, com duas skills:
 
 | Skill | O que faz |
 |---|---|
-| `orbit:orbit` | Registra uma entrega no Orbit (orbit.openexo.com.br): cria ou atualiza a task na lista do projeto, com etiqueta, sprint, horas e commits, pelo Claude in Chrome. |
+| `orbit:orbit` | Registra uma entrega no Orbit (orbit.openexo.com.br): cria ou atualiza a task na lista do projeto, com etiqueta, sprint, horas e commits, pela API do Orbit (o Claude in Chrome fica de reserva). |
 | `orbit:dia` | Varre o que você fez desde a última varredura (chats do Claude, commits, PRs, agenda, e-mails enviados, Drive, n8n, Lovable, Supabase), monta o plano de tasks e registra tudo depois do seu ok. |
 
 ## Instalar
@@ -22,7 +22,20 @@ Só usa o app Claude (aba Code)? Peça numa sessão para rodar esses dois comand
 
 O plugin passa a valer na próxima sessão. Tinha a skill copiada à mão em `~/.claude/skills/orbit`? Apague essa pasta, senão as duas versões ficam carregadas.
 
-Para usar, é preciso ter a extensão **Claude in Chrome** conectada e estar logado no Orbit.
+## Token da API
+
+Desde a versão 1.3.0 o registro é feito pela API do Orbit, com um token pessoal:
+
+1. No Orbit, abra Configurações > Perfil · Tokens de API e crie um token (ele aparece uma vez só).
+2. No Terminal, guarde o token no Keychain do Mac. O comando pede o token: cole e tecle Enter.
+
+   ```bash
+   security add-generic-password -U -a "$USER" -s orbit-api-token -w
+   ```
+
+Fora do macOS, use a variável de ambiente `ORBIT_API_TOKEN`. O token é uma credencial: não cole no chat nem em arquivos. Para conferir, peça numa sessão "confere meu token do Orbit" (a skill roda `orbit_api.py token`).
+
+Sem token, a skill registra pelo navegador: é preciso ter a extensão **Claude in Chrome** conectada e estar logado no Orbit.
 
 ## Perfil
 
@@ -37,9 +50,9 @@ A skill `orbit:dia` foi feita para rodar como tarefa agendada do app Claude (por
 - lê os históricos locais do Claude e o git das "Pastas de projetos" do perfil (script `plugins/orbit/skills/dia/scripts/coletar_dia.py`, só leitura);
 - consulta GitHub, Agenda, Gmail (só assunto, destinatário e horário), Drive, n8n, Lovable e Supabase quando os conectores estiverem ligados;
 - calcula as horas pelo tempo real de interação, sem contar duas vezes os chats em paralelo;
-- mostra o plano e **só registra depois do ok**; o que já foi registrado fica em `~/.claude/orbit-varredura.json` e não se repete.
+- simula o registro na API (sem gravar), mostra o plano e **só registra depois do ok**; o que já foi registrado fica em `~/.claude/orbit-varredura.json` e não se repete.
 
-Para rodar, o app e o Chrome (com o Claude in Chrome) precisam estar abertos. Se o app estiver fechado no horário, a tarefa roda quando ele abrir.
+Para rodar, o app precisa estar aberto (o Chrome com o Claude in Chrome, só se não houver token). Se o app estiver fechado no horário, a tarefa roda quando ele abrir.
 
 ## Atualizar
 
@@ -52,7 +65,7 @@ Reinicie a sessão do Claude para carregar a versão nova.
 
 ## Manutenção
 
-- A skill fica em `plugins/orbit/skills/orbit/`: `SKILL.md` (fluxo e padrões) e `references/interface.md` (receitas da interface do Orbit).
+- A skill fica em `plugins/orbit/skills/orbit/`: `SKILL.md` (fluxo e padrões), `scripts/orbit_api.py` (cliente da API, só biblioteca padrão do Python) e `references/interface.md` (receitas da interface do Orbit, para o registro pelo navegador).
 - A cada mudança, suba o `version` em `plugins/orbit/.claude-plugin/plugin.json`. Sem isso a atualização não chega para quem já instalou.
 - O repositório é público: nada de nomes de clientes, links de listas ou dados de pessoas aqui. Isso vai no perfil de cada um.
 - Descobriu algo novo na interface do Orbit: abra um PR em `references/interface.md` ou anote em "Notas" no seu perfil e avise quem mantém o plugin.
