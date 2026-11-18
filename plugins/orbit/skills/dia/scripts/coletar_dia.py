@@ -97,6 +97,17 @@ def regra_que_ignora(caminhos, regras):
     return None
 
 
+def abre_com_marca(texto):
+    """A tarefa agendada abre o chat com a marca. O app pode embrulhar o prompt
+    em <scheduled-task ...> com um aviso antes dele; aí a marca vem no começo
+    de uma linha dentro do bloco."""
+    if texto.startswith(MARCA):
+        return True
+    if texto.startswith("<scheduled-task"):
+        return re.search(r"^\s*" + re.escape(MARCA), texto, re.M) is not None
+    return False
+
+
 def texto_da_mensagem(msg):
     conteudo = (msg or {}).get("content")
     if isinstance(conteudo, str):
@@ -164,7 +175,7 @@ def ler_sessao(caminho, desde, ate):
             if texto_user and primeira_mensagem:
                 # Só a tarefa agendada abre o chat com a marca; a skill carregada
                 # no meio de outro chat também cita a marca e não pode excluí-lo.
-                eh_varredura = texto_user.startswith(MARCA)
+                eh_varredura = abre_com_marca(texto_user)
                 primeira_mensagem = False
             # [sem-orbit] vale em qualquer mensagem digitada pela pessoa, mesmo
             # fora da janela, e tira a sessão inteira do plano.
