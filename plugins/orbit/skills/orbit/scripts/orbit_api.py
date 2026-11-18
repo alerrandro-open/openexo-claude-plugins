@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Cliente da API do Orbit para as skills orbit e dia.
 
-Só usa a biblioteca padrão. O token pessoal (orb_...) vem de ORBIT_API_TOKEN
-ou, no macOS, do Keychain (serviço orbit-api-token). O script nunca imprime o
-token. A saída é sempre JSON.
+Só usa a biblioteca padrão. O token pessoal (orb_...) vem de ORBIT_API_TOKEN,
+do Keychain no macOS ou do Gerenciador de Credenciais no Windows (nos dois, o
+nome é orbit-api-token). O script nunca imprime o token. A saída é sempre JSON.
 
   orbit_api.py token                      confere se há token e se a API aceita
   orbit_api.py me
@@ -34,11 +34,53 @@ LOTE = 50
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 COMO_CRIAR = (
-    "Crie um token no Orbit (Configurações > Perfil · Tokens de API) e guarde no "
-    "Keychain rodando no Terminal: security add-generic-password -U -a \"$USER\" "
-    "-s orbit-api-token -w  (cole o token quando pedir). Fora do macOS, use a "
-    "variável ORBIT_API_TOKEN."
+    "Crie um token no Orbit (Configurações > Perfil · Tokens de API) e guarde no cofre "
+    "do sistema, rodando você mesmo (cole o token quando pedir). macOS, no Terminal: "
+    "security add-generic-password -U -a \"$USER\" -s orbit-api-token -w  | Windows, "
+    "no PowerShell ou Prompt: cmdkey /generic:orbit-api-token /user:orbit /pass  | "
+    "Outros sistemas: variável ORBIT_API_TOKEN."
 )
+
+
+def token_do_windows():
+    """Lê a credencial genérica orbit-api-token do Gerenciador de Credenciais
+    (gravada com cmdkey /generic:orbit-api-token /user:orbit /pass)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class CREDENCIAL(ctypes.Structure):
+        _fields_ = [
+            ("Flags", wintypes.DWORD), ("Type", wintypes.DWORD),
+            ("TargetName", wintypes.LPWSTR), ("Comment", wintypes.LPWSTR),
+            ("LastWritten", wintypes.FILETIME), ("CredentialBlobSize", wintypes.DWORD),
+            ("CredentialBlob", ctypes.POINTER(ctypes.c_ubyte)), ("Persist", wintypes.DWORD),
+            ("AttributeCount", wintypes.DWORD), ("Attributes", ctypes.c_void_p),
+            ("TargetAlias", wintypes.LPWSTR), ("UserName", wintypes.LPWSTR),
+        ]
+
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    advapi32.CredReadW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                                   ctypes.POINTER(ctypes.POINTER(CREDENCIAL))]
+    advapi32.CredReadW.restype = wintypes.BOOL
+    advapi32.CredFree.argtypes = [ctypes.c_void_p]
+    ponteiro = ctypes.POINTER(CREDENCIAL)()
+    CRED_TYPE_GENERIC = 1
+    if not advapi32.CredReadW(SERVICO_KEYCHAIN, CRED_TYPE_GENERIC, 0, ctypes.byref(ponteiro)):
+        return None
+    try:
+        cred = ponteiro.contents
+        bruto = ctypes.string_at(cred.CredentialBlob, cred.CredentialBlobSize)
+    finally:
+        advapi32.CredFree(ponteiro)
+    # O cmdkey grava em UTF-16; outras ferramentas podem gravar em UTF-8.
+    for codificacao in ("utf-16-le", "utf-8"):
+        try:
+            texto = bruto.decode(codificacao).strip("\x00").strip()
+        except UnicodeDecodeError:
+            continue
+        if texto.startswith("orb_"):
+            return texto
+    return None
 
 
 class ErroApi(Exception):
@@ -66,6 +108,13 @@ def ler_token():
             tok = r.stdout.strip()
             if r.returncode == 0 and tok:
                 return tok, "Keychain (%s)" % SERVICO_KEYCHAIN
+        except Exception:
+            pass
+    if sys.platform == "win32":
+        try:
+            tok = token_do_windows()
+            if tok:
+                return tok, "Gerenciador de Credenciais do Windows (%s)" % SERVICO_KEYCHAIN
         except Exception:
             pass
     return None, None

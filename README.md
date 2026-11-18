@@ -27,13 +27,22 @@ O plugin passa a valer na próxima sessão. Tinha a skill copiada à mão em `~/
 Desde a versão 1.3.0 o registro é feito pela API do Orbit, com um token pessoal:
 
 1. No Orbit, abra Configurações > Perfil · Tokens de API e crie um token (ele aparece uma vez só).
-2. No Terminal, guarde o token no Keychain do Mac. O comando pede o token: cole e tecle Enter.
+2. Guarde o token no cofre do sistema. O comando pede o token: cole e tecle Enter.
+   - **macOS**, no Terminal (Keychain):
 
-   ```bash
-   security add-generic-password -U -a "$USER" -s orbit-api-token -w
-   ```
+     ```bash
+     security add-generic-password -U -a "$USER" -s orbit-api-token -w
+     ```
 
-Fora do macOS, use a variável de ambiente `ORBIT_API_TOKEN`. O token é uma credencial: não cole no chat nem em arquivos. Para conferir, peça numa sessão "confere meu token do Orbit" (a skill roda `orbit_api.py token`).
+   - **Windows**, no PowerShell ou no Prompt de Comando (Gerenciador de Credenciais):
+
+     ```bash
+     cmdkey /generic:orbit-api-token /user:orbit /pass
+     ```
+
+Em outros sistemas, use a variável de ambiente `ORBIT_API_TOKEN`.
+
+**Windows:** os scripts do plugin usam Python 3, que não vem instalado. Instale uma vez (`winget install Python.Python.3.12`, ou pelo python.org marcando "Add python.exe to PATH") e abra uma sessão nova do Claude. O token é uma credencial: não cole no chat nem em arquivos. Para conferir, peça numa sessão "confere meu token do Orbit" (a skill roda `orbit_api.py token`).
 
 Sem token, a skill registra pelo navegador: é preciso ter a extensão **Claude in Chrome** conectada e estar logado no Orbit.
 
@@ -63,6 +72,29 @@ Nem toda sessão é trabalho para registrar. Para deixar algo de fora:
 - **Um item do plano:** responda "tira o 3". Ele fica marcado como ignorado e não volta.
 
 No fim do plano, a varredura mostra numa linha o que ficou de fora e por quê, para você conferir.
+
+## Registro de atividade (opcional)
+
+Para a varredura enxergar o trabalho que não passa pelo Claude nem pelo git (planilhas, Gerenciador de Anúncios, Clinic, Manager), cada pessoa pode ligar um registro de atividade no próprio computador:
+
+- A cada 30 segundos ele grava **qual programa e qual janela estão em primeiro plano** e se a pessoa está parada há mais de 5 minutos.
+- **Não tira print, não lê o teclado nem o conteúdo das janelas.**
+- Os registros ficam só no computador, em `~/.claude/orbit-atividade/`, e são apagados depois de 35 dias.
+- A varredura mostra o resumo (minutos por programa e por janela) no plano. Nada vai para o Orbit sem o ok da pessoa, e os títulos de janela não são copiados para as tasks.
+
+Comandos, a partir da pasta do plugin (`skills/dia/scripts/atividade.py`) ou pedindo numa sessão do Claude:
+
+| Comando | O que faz |
+|---|---|
+| `python3 atividade.py amostra` | Mostra o que seria gravado agora, sem gravar |
+| `python3 atividade.py instalar` | Liga: começa a gravar e passa a iniciar sozinho no login (Windows: pasta Inicializar; macOS: LaunchAgent) |
+| `python3 atividade.py pausar 60` | Para de gravar por 60 minutos (`pausar 0` retoma) |
+| `python3 atividade.py status` | Diz se está gravando, se está pausado e desde quando há registros |
+| `python3 atividade.py desinstalar` | Desliga (acrescente `--apagar-registros` para apagar o que foi gravado) |
+
+No Windows use `python` (ou `py`) no lugar de `python3`. No macOS, o título da janela só aparece com a permissão de Acessibilidade; sem ela, fica só o nome do programa.
+
+**Antes de ligar numa equipe:** avise por escrito o que é registrado, para quê e quem vê. No Windows o sistema não mostra nenhum aviso de que o registro está ligado. Para prestadores PJ, confira antes com o jurídico.
 
 ## Atualizar
 

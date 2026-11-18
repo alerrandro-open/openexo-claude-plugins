@@ -48,6 +48,23 @@ do plano.
 
 Sessões da própria varredura (marca `[varredura-orbit]`) já vêm excluídas.
 
+### Atividade do computador (opcional)
+
+Se a pessoa ligou o registro de atividade (`scripts/atividade.py instalar`), a
+coleta traz `atividade`:
+- `minutos_ativos`: tempo com o computador em uso;
+- `por_app`, `por_janela` (top 40) e `por_hora`: minutos por programa, por
+  janela (título resumido) e por hora.
+
+O tempo parado (mais de 5 min sem teclado nem mouse) não conta. Use para:
+- achar trabalho que nenhum chat ou commit explica (planilhas, Gerenciador
+  de Anúncios, Clinic, Manager), e virar entrega ou entrar na do assunto;
+- conferir as horas do plano contra o tempo de uso real.
+
+Não copie títulos de janela para o Orbit: eles podem ter nome de cliente,
+paciente ou conversa. Escreva a entrega com as suas palavras. Se `atividade`
+vier `null`, o registro não está ligado; siga sem ele.
+
 ### Outras fontes (conectores)
 
 Use as que estiverem disponíveis; sem o conector, pule e diga no plano.
@@ -138,7 +155,9 @@ Na coluna Simulação, use o resultado: nova (`created`), atualiza
 Origem, cite os chats (título), commits e PRs de cada task.
 Depois da tabela, mostre:
 
-- tempo real no Claude (`minutos_reais_no_claude`) e total de horas do plano;
+- tempo real no Claude (`minutos_reais_no_claude`), tempo de uso do
+  computador (`atividade.minutos_ativos`, quando houver) e total de horas do
+  plano;
 - o que ficou fora do Orbit, numa linha: títulos de `ignoradas` com o motivo
   (marca ou perfil), para a pessoa conferir;
 - fontes puladas (sem conector) e listas que faltam no perfil;
@@ -191,5 +210,6 @@ listas novas gravadas no perfil.
   envie mensagens, não arquive chats, não altere nada fora do Orbit.
 - Só o trabalho de quem está usando (histórico local e conta própria nos
   conectores).
-- Não use histórico do navegador nem nada fora das fontes acima.
+- Não use histórico do navegador nem nada fora das fontes acima. O registro
+  de atividade só vale se a própria pessoa o ligou; nunca ligue por ela.
 - Não apague tasks; não mude tasks de outras pessoas.
