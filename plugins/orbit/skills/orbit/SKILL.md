@@ -56,6 +56,7 @@ Leia `~/.claude/orbit-perfil.md`. Se não existir:
   - Horas estimadas padrão: 1h
   - Confirmar antes de criar: sim
   - Pastas de projetos: ~/Documents/Projetos
+  - Ignorar:
 
   ## Listas
 
@@ -71,6 +72,15 @@ O responsável é quem é dono do token (`"me"`). Outra pessoa (entrega feita em
 dupla, registro para um colega) só quando o usuário pedir.
 
 "Confirmar antes de criar" ausente conta como `sim`.
+
+**O que não vai para o Orbit:**
+- **"Ignorar":** nomes de repositório ou pasta (ou caminhos), separados por
+  vírgula, que nunca vão para o Orbit. Por exemplo, projetos pessoais ou de
+  outra empresa.
+- **Uma sessão só:** comece uma mensagem com `[sem-orbit]`, em qualquer
+  momento da sessão. A varredura tira a sessão inteira.
+- **Numa sessão em que a pessoa escreveu `[sem-orbit]`:** esta skill não registra nada,
+  mesmo depois de commit, a menos que a pessoa peça.
 
 ## 2. Lista e etiqueta do projeto
 

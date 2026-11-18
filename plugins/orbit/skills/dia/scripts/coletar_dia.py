@@ -5,6 +5,10 @@ Usado pela skill orbit:dia. Só lê os históricos locais do Claude
 (~/.claude/projects/*/*.jsonl) e o git; a única escrita é o estado da
 varredura em ~/.claude/orbit-varredura.json (subcomandos marcar e concluir).
 
+Ficam fora do plano (em "ignoradas"): sessões em que a pessoa começou uma
+mensagem com [sem-orbit] e sessões/commits dos repositórios ou pastas da linha
+"- Ignorar:" do perfil.
+
   coletar_dia.py coletar [--desde ISO] [--ate ISO]
   coletar_dia.py marcar --task "Título" [--lista URL] [--id ID] [--chave-externa K] CHAVE [CHAVE ...]
   coletar_dia.py concluir --ate ISO
@@ -22,6 +26,7 @@ CLAUDE_DIR = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claud
 ESTADO = os.path.join(CLAUDE_DIR, "orbit-varredura.json")
 PERFIL = os.path.join(CLAUDE_DIR, "orbit-perfil.md")
 MARCA = "[varredura-orbit]"
+MARCA_SEM_ORBIT = "[sem-orbit]"
 PAUSA_MAX = timedelta(minutes=15)
 MINUTOS_POR_BLOCO = 5
 JANELA_MAX = timedelta(days=3)
@@ -62,6 +67,34 @@ def pastas_do_perfil():
     if not m:
         return []
     return [os.path.expanduser(p.strip()) for p in m.group(1).split(",") if p.strip()]
+
+
+def regras_ignorar():
+    """Itens da linha "- Ignorar:" do perfil: nome de repositório/pasta ou caminho."""
+    try:
+        texto = open(PERFIL, encoding="utf-8").read()
+    except Exception:
+        return []
+    m = re.search(r"^- Ignorar:\s*(.+)$", texto, re.M)
+    if not m:
+        return []
+    return [p.strip().strip("`").strip() for p in m.group(1).split(",") if p.strip().strip("`").strip()]
+
+
+def regra_que_ignora(caminhos, regras):
+    for caminho in caminhos:
+        if not caminho:
+            continue
+        caminho = os.path.normpath(caminho)
+        nome = os.path.basename(caminho).lower()
+        for regra in regras:
+            if "/" in regra or regra.startswith("~"):
+                alvo = os.path.normpath(os.path.expanduser(regra))
+                if caminho == alvo or caminho.startswith(alvo + os.sep):
+                    return regra
+            elif nome == regra.lower():
+                return regra
+    return None
 
 
 def texto_da_mensagem(msg):
@@ -108,6 +141,7 @@ def ler_sessao(caminho, desde, ate):
     marcas = []
     mensagens = 0
     eh_varredura = False
+    sem_orbit = False
     primeira_mensagem = True
     with open(caminho, encoding="utf-8", errors="replace") as f:
         for bruta in f:
@@ -132,6 +166,10 @@ def ler_sessao(caminho, desde, ate):
                 # no meio de outro chat também cita a marca e não pode excluí-lo.
                 eh_varredura = texto_user.startswith(MARCA)
                 primeira_mensagem = False
+            # [sem-orbit] vale em qualquer mensagem digitada pela pessoa, mesmo
+            # fora da janela, e tira a sessão inteira do plano.
+            if humano and texto_user.startswith(MARCA_SEM_ORBIT):
+                sem_orbit = True
             if not ts or ts < desde or ts > ate:
                 continue
             if tipo == "assistant":
@@ -166,6 +204,7 @@ def ler_sessao(caminho, desde, ate):
         "fim": marcas[-1].isoformat(timespec="minutes"),
         "minutos_ativos": minutos_de(intervalos),
         "_intervalos": intervalos,
+        "_sem_orbit": sem_orbit,
         "mensagens": mensagens,
         "pedido_inicial": (pedido or "")[:400],
         "relatorio_final": (relatorio or "")[:1500],
@@ -270,12 +309,32 @@ def coletar(args):
     sessoes.sort(key=lambda s: s["inicio"])
     soma = sum(s["minutos_ativos"] for s in sessoes)
     real = minutos_de(uniao([i for s in sessoes for i in s["_intervalos"]]))
+    # As horas proporcionais contam todas as sessões, inclusive as que ficam
+    # fora do Orbit: o tempo delas não passa para as outras.
+    regras = regras_ignorar()
+    ignoradas, mantidas, janelas_sem_orbit = [], [], []
     for s in sessoes:
-        del s["_intervalos"]
         s["minutos_proporcionais"] = round(real * s["minutos_ativos"] / soma) if soma else 0
+        regra = regra_que_ignora([s.get("repo"), s.get("cwd")], regras)
+        if s["_sem_orbit"] or regra:
+            ignoradas.append({
+                "chave": s["chave"], "titulo": s["titulo"], "repo": s.get("repo") or s.get("cwd"),
+                "motivo": "marca %s" % MARCA_SEM_ORBIT if s["_sem_orbit"] else "perfil: Ignorar %s" % regra,
+                "minutos_proporcionais": s["minutos_proporcionais"],
+            })
+            if s["_sem_orbit"] and s.get("repo"):
+                janelas_sem_orbit.append((s["repo"], s["_intervalos"][0][0], s["_intervalos"][-1][1], s["titulo"]))
+        else:
+            mantidas.append(s)
+        del s["_intervalos"]
+        del s["_sem_orbit"]
+    sessoes = mantidas
 
     repos = {s["repo"] for s in sessoes if s.get("repo")}
+    repos |= {r for (r, _, _, _) in janelas_sem_orbit}
     repos |= repos_nas_pastas(pastas_do_perfil())
+    repos_ignorados = sorted(r for r in repos if regra_que_ignora([r], regras))
+    repos -= set(repos_ignorados)
     commits = []
     vistos = set()
     for repo in sorted(repos):
@@ -284,6 +343,13 @@ def coletar(args):
                 continue
             vistos.add(c["chave"])
             c["ja_registrado"] = registradas.get(c["chave"])
+            # Commit no mesmo repo durante uma sessão [sem-orbit]: provavelmente
+            # é dela. Fica sinalizado para a skill decidir.
+            quando = ler_ts(c["data"])
+            for repo_s, ini, fim_s, titulo in janelas_sem_orbit:
+                if repo_s == repo and quando and ini - timedelta(minutes=5) <= quando <= fim_s:
+                    c["de_sessao_sem_orbit"] = titulo or "(sem título)"
+                    break
             commits.append(c)
     commits.sort(key=lambda c: c["data"])
 
@@ -295,6 +361,8 @@ def coletar(args):
         "minutos_somados_dos_chats": soma,
         "sessoes": sessoes,
         "commits": commits,
+        "ignoradas": ignoradas,
+        "repos_ignorados": repos_ignorados,
         "repos_olhados": sorted(repos),
     }
     json.dump(saida, sys.stdout, ensure_ascii=False, indent=1)
