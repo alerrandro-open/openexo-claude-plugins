@@ -26,20 +26,29 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/orbit_api.py" token
 
 - `"ok": true`: siga pela API.
 - Sem token ou 401: peça ao usuário para criar um token no Orbit
-  (Configurações > Perfil · Tokens de API) e guardá-lo no Keychain rodando
-  ele mesmo, no Terminal:
+  (Configurações > Perfil · Tokens de API) e guardá-lo no cofre do sistema,
+  rodando ele mesmo. O comando pede o token: é só colar e teclar Enter.
+  - macOS (Terminal):
 
-  ```bash
-  security add-generic-password -U -a "$USER" -s orbit-api-token -w
-  ```
+    ```bash
+    security add-generic-password -U -a "$USER" -s orbit-api-token -w
+    ```
 
-  O comando pede o token: é só colar e teclar Enter. Fora do macOS, use a
-  variável de ambiente `ORBIT_API_TOKEN`. Enquanto não houver token, use o
-  navegador.
+  - Windows (PowerShell ou Prompt de Comando), no Gerenciador de Credenciais:
+
+    ```bash
+    cmdkey /generic:orbit-api-token /user:orbit /pass
+    ```
+
+  - Outros sistemas: variável de ambiente `ORBIT_API_TOKEN`.
+
+  Enquanto não houver token, use o navegador.
+- Windows sem Python: o script precisa do Python 3. Peça para a pessoa
+  instalar (`winget install Python.Python.3.12`) e abrir uma sessão nova.
 
 O token é uma credencial: nunca peça no chat, não grave em arquivo, não
-imprima e não passe na linha de comando. O script lê sozinho do Keychain ou da
-variável.
+imprima e não passe na linha de comando. O script lê sozinho do Keychain, do
+Gerenciador de Credenciais ou da variável.
 
 ## 1. Perfil de quem está usando
 

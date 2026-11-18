@@ -5,6 +5,9 @@ Usado pela skill orbit:dia. Só lê os históricos locais do Claude
 (~/.claude/projects/*/*.jsonl) e o git; a única escrita é o estado da
 varredura em ~/.claude/orbit-varredura.json (subcomandos marcar e concluir).
 
+Se o registro de atividade (atividade.py) estiver ligado, o resumo do que ficou
+em primeiro plano no computador vem em "atividade".
+
 Ficam fora do plano (em "ignoradas"): sessões em que a pessoa começou uma
 mensagem com [sem-orbit] e sessões/commits dos repositórios ou pastas da linha
 "- Ignorar:" do perfil.
@@ -85,11 +88,12 @@ def regra_que_ignora(caminhos, regras):
     for caminho in caminhos:
         if not caminho:
             continue
-        caminho = os.path.normpath(caminho)
+        # normcase deixa a comparação sem diferença de maiúsculas no Windows.
+        caminho = os.path.normcase(os.path.normpath(caminho))
         nome = os.path.basename(caminho).lower()
         for regra in regras:
-            if "/" in regra or regra.startswith("~"):
-                alvo = os.path.normpath(os.path.expanduser(regra))
+            if "/" in regra or "\\" in regra or regra.startswith("~") or re.match(r"^[A-Za-z]:", regra):
+                alvo = os.path.normcase(os.path.normpath(os.path.expanduser(regra)))
                 if caminho == alvo or caminho.startswith(alvo + os.sep):
                     return regra
             elif nome == regra.lower():
@@ -129,7 +133,8 @@ def eh_pedido_humano(linha):
 
 
 def raiz_do_repo(cwd):
-    m = re.match(r"^(.*?)/\.claude/worktrees/[^/]+", cwd or "")
+    # Barra do macOS/Linux e contrabarra do Windows.
+    m = re.match(r"^(.*?)[\\/]\.claude[\\/]worktrees[\\/][^\\/]+", cwd or "")
     base = m.group(1) if m else cwd
     try:
         saida = subprocess.run(
@@ -242,7 +247,7 @@ def repos_nas_pastas(pastas):
         for raiz, dirs, _ in os.walk(pasta):
             profundidade = raiz[len(pasta):].count(os.sep)
             if ".git" in dirs or os.path.isfile(os.path.join(raiz, ".git")):
-                if "/.claude/worktrees/" not in raiz:
+                if not re.search(r"[\\/]\.claude[\\/]worktrees[\\/]", raiz):
                     achados.add(raiz)
                 dirs[:] = []
                 continue
@@ -364,6 +369,14 @@ def coletar(args):
             commits.append(c)
     commits.sort(key=lambda c: c["data"])
 
+    atividade = None
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import atividade as registro_atividade
+        atividade = registro_atividade.resumo(inicio, fim)
+    except Exception as e:
+        atividade = {"erro": "não deu para ler o registro de atividade: %s" % e}
+
     saida = {
         "desde": inicio.isoformat(timespec="minutes"),
         "ate": fim.isoformat(timespec="minutes"),
@@ -373,6 +386,7 @@ def coletar(args):
         "sessoes": sessoes,
         "commits": commits,
         "ignoradas": ignoradas,
+        "atividade": atividade,
         "repos_ignorados": repos_ignorados,
         "repos_olhados": sorted(repos),
     }
