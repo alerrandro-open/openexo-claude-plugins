@@ -10,6 +10,7 @@ nome é orbit-api-token). O script nunca imprime o token. A saída é sempre JSO
   orbit_api.py listas [--busca TXT]
   orbit_api.py meta LISTA                 etiquetas, membros, status, sprint atual
   orbit_api.py tarefas --lista LISTA [--busca TXT] [--minhas] [--encerradas] [--desde AAAA-MM-DD]
+  orbit_api.py pendencias [--lista LISTA] [--dias-parada 7]   tasks abertas da pessoa, por prazo
   orbit_api.py entregar ARQUIVO.json [--simular]
   orbit_api.py horas TAREFA --data AAAA-MM-DD --inicio HH:MM --duracao "1h 30m" [--nota TXT] [--chave K] [--simular]
   orbit_api.py atualizar TAREFA [--status S [--lista LISTA]] [--descricao TXT [--substituir]] [--etiquetas "A,B"] [--simular]
@@ -24,6 +25,7 @@ import re
 import subprocess
 import sys
 import time
+from datetime import date, datetime
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -209,11 +211,7 @@ def cmd_meta(args):
     mostrar(chamar("GET", "/lists/%s/meta" % id_de(args.lista)))
 
 
-def cmd_tarefas(args):
-    consulta = {"list_id": id_de(args.lista), "q": args.busca,
-                "assignee": "me" if args.minhas else None,
-                "include_closed": "true" if args.encerradas else None,
-                "updated_since": args.desde}
+def buscar_tarefas(consulta):
     saida, depois = [], None
     for _ in range(50):
         d = chamar("GET", "/tasks", consulta=dict(consulta, after=depois))
@@ -221,6 +219,15 @@ def cmd_tarefas(args):
         depois = d.get("next_cursor")
         if not depois:
             break
+    return saida
+
+
+def cmd_tarefas(args):
+    consulta = {"list_id": id_de(args.lista), "q": args.busca,
+                "assignee": "me" if args.minhas else None,
+                "include_closed": "true" if args.encerradas else None,
+                "updated_since": args.desde}
+    saida = buscar_tarefas(consulta)
     mostrar([{
         "id": t["id"], "titulo": t["title"], "status": (t.get("status") or {}).get("name"),
         "tipo": (t.get("status") or {}).get("type"),
@@ -267,6 +274,66 @@ def resolver_status(valor, lid=None):
                 if termo in s.get("name", "").lower():
                     return s["name"]
     return padrao
+
+
+ORDEM_GRUPOS = ["vencida", "hoje", "amanha", "semana", "depois", "sem_prazo", "backlog"]
+
+
+def _data(texto):
+    try:
+        return date.fromisoformat((texto or "")[:10])
+    except ValueError:
+        return None
+
+
+def cmd_pendencias(args):
+    """Tasks abertas da pessoa em todas as listas (ou numa), separadas por prazo."""
+    hoje = datetime.now().astimezone().date()
+    if args.lista:
+        listas = [{"id": id_de(args.lista), "name": None}]
+    else:
+        listas = chamar("GET", "/lists").get("data", [])
+    # Uma consulta por lista, em paralelo (bem abaixo do limite de 120 por minuto).
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        por_lista = list(pool.map(lambda l: (l, buscar_tarefas({"list_id": l["id"], "assignee": "me"})), listas))
+    itens = []
+    for lista, tarefas in por_lista:
+        for t in tarefas:
+            status = t.get("status") or {}
+            if status.get("type") == "closed":
+                continue
+            vence = _data(t.get("due_date"))
+            atualizada = _data(t.get("updated_at"))
+            dias = (vence - hoje).days if vence else None
+            if "backlog" in (status.get("name") or "").lower():
+                grupo = "backlog"
+            elif dias is None:
+                grupo = "sem_prazo"
+            elif dias < 0:
+                grupo = "vencida"
+            elif dias == 0:
+                grupo = "hoje"
+            elif dias == 1:
+                grupo = "amanha"
+            elif dias <= 7:
+                grupo = "semana"
+            else:
+                grupo = "depois"
+            parada = (hoje - atualizada).days if atualizada else None
+            itens.append({
+                "grupo": grupo, "id": t["id"], "titulo": t["title"], "lista": lista.get("name"),
+                "status": status.get("name"), "vencimento": t.get("due_date"), "dias_para_vencer": dias,
+                "dias_sem_mexer": parada, "parada": parada is not None and parada >= args.dias_parada,
+                "horas": round((t.get("tracked_total") or 0) / 3600, 2),
+                "etiquetas": [g.get("name") for g in t.get("tags") or []], "url": t.get("url"),
+            })
+    itens.sort(key=lambda i: (ORDEM_GRUPOS.index(i["grupo"]),
+                              i["dias_para_vencer"] if i["dias_para_vencer"] is not None else 9999,
+                              -(i["dias_sem_mexer"] or 0)))
+    resumo = {g: sum(1 for i in itens if i["grupo"] == g) for g in ORDEM_GRUPOS}
+    resumo["paradas"] = sum(1 for i in itens if i["parada"] and i["grupo"] != "backlog")
+    mostrar({"hoje": hoje.isoformat(), "total": len(itens), "resumo": resumo, "tarefas": itens})
 
 
 def nomes_de_status(list_ids):
@@ -370,6 +437,11 @@ def main():
     s.add_argument("--encerradas", action="store_true", help="inclui as encerradas")
     s.add_argument("--desde", help="atualizadas desde AAAA-MM-DD")
     s.set_defaults(func=cmd_tarefas)
+
+    s = sub.add_parser("pendencias")
+    s.add_argument("--lista", help="só esta lista (padrão: todas as que a pessoa acessa)")
+    s.add_argument("--dias-parada", type=int, default=7, help="sem mexer há N dias conta como parada")
+    s.set_defaults(func=cmd_pendencias)
 
     s = sub.add_parser("entregar")
     s.add_argument("arquivo")

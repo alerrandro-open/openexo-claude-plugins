@@ -232,6 +232,31 @@ Só quando não houver token ou a API estiver fora do ar.
 5. **Confira.** Encerradas somem da Lista e do Quadro: reabra cada task pela aba
    **Atividade** e confira status, horas, etiquetas e sprint.
 
+## 7. Pendências e prazos
+
+Quando a pessoa pedir "o que tenho pendente", "organiza meus prazos" ou algo
+parecido:
+
+1. Rode `orbit_api.py pendencias` (todas as listas; `--lista` para uma só).
+2. Mostre por grupo: vencidas, hoje, amanhã, esta semana, depois, sem prazo.
+   Para cada uma, mostre lista, status, vencimento, dias sem mexer e o
+   resumo da descrição (o que falta). Backlog vai só como contagem.
+3. Sugira, por task:
+   - **encerrar**, se já terminou (pergunte se não tiver certeza);
+   - **Waiting**, se depende de outra pessoa (cliente, Meta, fornecedor),
+     para não aparecer como atraso dela;
+   - **nova data**, realista, se ainda é dela;
+   - **quebrar**, se for grande demais para uma data só.
+4. Proponha uma ordem para a semana: primeiro o vencido que depende só dela,
+   depois o que vence hoje e amanhã, e os pedidos para terceiros logo cedo
+   (um e-mail ou mensagem destrava várias). Use as horas estimadas e o que
+   já foi lançado para não passar de um dia de trabalho por dia.
+5. Com o ok, aplique o que a API permite: status (`closed`, `doing` ou o
+   nome, como "Waiting - Impedido") e acréscimo na descrição, com
+   `atualizar`. Encerrar exige horas lançadas. **Datas não mudam pela API**:
+   entregue a lista de datas novas para a pessoa ajustar no Orbit, ou ajuste
+   pelo navegador (seção 6) se ela pedir.
+
 ## Regras
 
 - Uma task por entrega/funcionalidade, não uma por commit.
