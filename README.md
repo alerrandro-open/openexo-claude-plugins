@@ -54,6 +54,16 @@ A skill `orbit:dia` foi feita para rodar como tarefa agendada do app Claude (por
 
 Para rodar, o app precisa estar aberto (o Chrome com o Claude in Chrome, só se não houver token). Se o app estiver fechado no horário, a tarefa roda quando ele abrir.
 
+### O que fica fora do Orbit
+
+Nem toda sessão é trabalho para registrar. Para deixar algo de fora:
+
+- **Uma sessão:** comece uma mensagem com `[sem-orbit]`, a qualquer momento da sessão. A varredura tira a sessão inteira, e os commits feitos no mesmo repo durante ela também ficam de fora.
+- **Um projeto inteiro:** acrescente o nome do repositório ou da pasta na linha `- Ignorar:` do seu perfil (`~/.claude/orbit-perfil.md`), separado por vírgula. Por exemplo: `- Ignorar: projeto-pessoal, outro-repo`. Essas sessões e commits nem entram no plano.
+- **Um item do plano:** responda "tira o 3". Ele fica marcado como ignorado e não volta.
+
+No fim do plano, a varredura mostra numa linha o que ficou de fora e por quê, para você conferir.
+
 ## Atualizar
 
 ```bash

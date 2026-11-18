@@ -35,7 +35,16 @@ locais do Claude e o git e devolve JSON com:
 - `commits`: commits da pessoa em todos os repos (inclusive os feitos fora
   do Claude), com `ja_registrado`;
 - `minutos_reais_no_claude`: tempo real de interação no dia, sem contar duas
-  vezes os chats em paralelo.
+  vezes os chats em paralelo;
+- `ignoradas`: sessões que ficam fora do Orbit, com o motivo. Ou a pessoa
+  começou uma mensagem com `[sem-orbit]`, ou o repo/pasta está na linha
+  "Ignorar" do perfil. Elas não entram no plano. As horas delas continuam
+  contando no rateio: o tempo não passa para as outras sessões;
+- `repos_ignorados`: repos da linha "Ignorar"; os commits deles nem são lidos.
+
+Commit com `de_sessao_sem_orbit` foi feito no mesmo repo durante uma sessão
+`[sem-orbit]`. Ele fica fora, a menos que pertença claramente a uma entrega
+do plano.
 
 Sessões da própria varredura (marca `[varredura-orbit]`) já vêm excluídas.
 
@@ -130,6 +139,8 @@ Origem, cite os chats (título), commits e PRs de cada task.
 Depois da tabela, mostre:
 
 - tempo real no Claude (`minutos_reais_no_claude`) e total de horas do plano;
+- o que ficou fora do Orbit, numa linha: títulos de `ignoradas` com o motivo
+  (marca ou perfil), para a pessoa conferir;
 - fontes puladas (sem conector) e listas que faltam no perfil;
 - o pedido: "Responda **ok** para registrar, ou diga o que mudar (juntar,
   separar, tirar, horas, lista)."
@@ -138,7 +149,9 @@ Rodando agendada, ninguém está olhando: deixe o plano e espere a resposta
 no próprio chat. Não registre nada sem o ok, nem por tempo esgotado.
 
 Ajustes do usuário: refaça a tabela e peça o ok de novo. Itens que ele mandar
-tirar: marque como ignorados (passo 4) para não voltarem.
+tirar: marque como ignorados (passo 4) para não voltarem. Se ele disser que
+um repo ou pasta nunca vai para o Orbit, acrescente na linha "Ignorar" do
+perfil (crie a linha se não existir).
 
 ## 4. Registrar e guardar o estado
 
